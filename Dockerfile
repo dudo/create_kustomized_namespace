@@ -1,6 +1,6 @@
 FROM ruby:2-slim
 
-LABEL "name"="Kustomized Namespace Action - Create Overlay"
+LABEL "name"="Kustomized Namespace - Create Overlay"
 LABEL "maintainer"="Brett Dudo <brett@dudo.io>"
 LABEL "version"="0.9.0"
 
