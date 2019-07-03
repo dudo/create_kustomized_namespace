@@ -71,7 +71,7 @@ Check out the overlays to be created:
 
 And to see Kustomize do its thing:
 
-    docker run kustomized_namespaces/create:latest -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest --dry-run --built
+    ruby create_overlay.rb -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest --dry-run --built
 
 Actually commit to your repo!
 
