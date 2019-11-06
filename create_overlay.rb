@@ -10,17 +10,17 @@ $opts = Slop.parse do |o|
   o.separator 'example: create_overlay --service my-service --cluster-repo my-company/my-cluster --target-image my-company/my-service'
   o.separator ''
   o.separator 'options:'
-  o.string '-s', '--service', 
+  o.string '-s', '--service',
     'The service to deploy to your cluster', default: ENV['SERVICE']
-  o.string '-r', '--cluster-repo', 
+  o.string '-r', '--cluster-repo',
     'GitHub repository that controls your cluster', default: ENV['CLUSTER_REPO']
-  o.string '-i', '--target-image', 
+  o.string '-i', '--target-image',
     'Remotely hosted target image', default: ENV['TARGET_IMAGE']
-  o.string '-n', '--namespace', 
-    'Desired namespace, or inferred from GITHUB_REF', default: ENV['GITHUB_REF']&.split('/')&.reject{ |i| %w(refs heads).include? i }&.join('-')
-  o.string '-t', '--tag', 
+  o.string '-n', '--namespace',
+    'Desired namespace, or inferred from GITHUB_HEAD_REF', default: ENV['GITHUB_HEAD_REF']&.split('/')&.join('-')
+  o.string '-t', '--tag',
     'Image tag, or inferred from GITHUB_SHA', default: ENV['GITHUB_SHA']&.[](0..6)
-  o.string '-T', '--token', 
+  o.string '-T', '--token',
     'GitHub access token with repos access, _NOT_ GITHUB_TOKEN', default: ENV['TOKEN']
   o.boolean '--flux',
     'Modifies manifests for automated Flux deployments', default: false
