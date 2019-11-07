@@ -39,7 +39,7 @@ class Manifest
 
   def self.create
     instance = self.new
-    
+
     instance.supporting_services.each do |svc|
       instance.create_supporting_manifests(svc)
     end
@@ -48,7 +48,7 @@ class Manifest
     instance.create_flux_manifest if $opts[:flux]
 
     return instance.dry_run if $opts[:dry_run]
-    
+
     instance.commit_overlay_to_github
     puts 'Done!'
   end
@@ -59,7 +59,7 @@ class Manifest
 
   def create_namespace_manifest
     return puts "Using existing namespace '#{namespace}'" unless include_namespace?
-    
+
     puts "Creating namespace '#{namespace}'..."
     $templates << Templates::Namespace.new(service: service, namespace: namespace)
   end
@@ -67,7 +67,7 @@ class Manifest
   def create_primary_manifests
     puts "Creating #{service} manifests with #{$opts[:target_image]}:#{$opts[:tag]}..."
     # check each type of file for the service we're updating, and create an overlay
-    
+
     $templates << Templates::Ingress.new(service: service, namespace: namespace, hosts: base_ingress_hosts(service)) if include_ingress?(service)
     $templates << Templates::Kustomization.new(service: service, namespace: namespace, img: true)
   end
@@ -77,15 +77,15 @@ class Manifest
     services.each do |svc|
       generators << { 'command' => "kustomize build ./#{svc}/overlays/#{namespace}" }
     end
-    generators.uniq
-    $templates << Templates::Flux.new(service: service, namespace: namespace, generators: generators)
+
+    $templates << Templates::Flux.new(service: service, namespace: namespace, generators: generators.uniq)
   end
 
-  def create_supporting_manifests(svc)   
+  def create_supporting_manifests(svc)
     return puts "Using existing manifests for #{svc}" unless create_overlay?(svc)
 
     puts "Creating #{svc} manifests pointing to #{svc}.default.svc.cluster.local..."
-    
+
     $templates << Templates::Ingress.new(service: svc, namespace: namespace, hosts: base_ingress_hosts(svc)) if include_ingress?(svc)
     $templates << Templates::Service.new(service: svc, namespace: namespace) if include_service?(svc)
     $templates << Templates::Kustomization.new(service: svc, namespace: namespace, svc: true)
@@ -95,11 +95,11 @@ class Manifest
     puts "Creating overlays for '#{namespace}' in GitHub repository #{repo}..."
     ref = 'heads/master'
     sha_latest_commit = client.ref(repo, ref).object.sha
-    
+
     sha_base_tree = client.commit(repo, sha_latest_commit).commit.tree.sha
-    
+
     sha_new_tree = client.create_tree(repo, new_blobs, { base_tree: sha_base_tree }).sha
-    
+
     commit_message = "Create #{service} in namespace '#{namespace}' with image #{$opts[:target_image]}:#{$opts[:tag]}"
     sha_new_commit = client.create_commit(repo, commit_message, sha_new_tree, sha_latest_commit).sha
     updated_ref = client.update_ref(repo, ref, sha_new_commit)
@@ -120,7 +120,7 @@ class Manifest
       puts "Found services #{services}"
       services
     else
-      exit_code("Unknown service. Please choose one of #{services}", 2) 
+      exit_code("Unknown service. Please choose one of #{services}", 2)
     end
   end
 
@@ -181,11 +181,11 @@ class Manifest
 
   def new_blobs
     $templates.map do |t|
-      { 
-        path: t.path, 
-        mode: '100644', 
-        type: 'blob', 
-        sha: client.create_blob(repo, Base64.encode64(t.manifest.to_yaml), 'base64') 
+      {
+        path: t.path,
+        mode: '100644',
+        type: 'blob',
+        sha: client.create_blob(repo, Base64.encode64(t.manifest.to_yaml), 'base64')
       }
     end
   end
@@ -198,7 +198,7 @@ class Manifest
   end
 
   def print_manifests
-    services.each do |svc| 
+    services.each do |svc|
       base_manifests(svc).each do |m|
         FileUtils.mkdir_p "/tmp/#{svc}/base"
         File.write "/tmp/#{m.path}", Base64.decode64(client.contents(repo, path: m.path).content)
