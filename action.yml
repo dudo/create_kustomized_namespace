@@ -1,0 +1,34 @@
+name: Kustomized Namespace - Create Overlay
+description: This creates an overlay within a namespace for a feature and ensures your services are still connected
+author: dudo
+inputs:
+  service:
+    description: The service to deploy to your cluster
+    default: ENV['SERVICE']
+  cluster-repo:
+    description: GitHub repository that controls your cluster
+    default: ENV['CLUSTER_REPO']
+  target-image:
+    description: Remotely hosted target image
+    default: ENV['TARGET_IMAGE']
+  namespace:
+    description: Desired namespace, or inferred from GITHUB_HEAD_REF
+    default: ENV['GITHUB_HEAD_REF']
+  tag:
+    description: Image tag, or inferred from GITHUB_SHA
+    default: ENV['GITHUB_SHA']
+  token:
+    description: GitHub access token with cluster-repo's access, _NOT_ GITHUB_TOKEN
+    default: ENV['TOKEN']
+  flux:
+    description: Modifies manifests for automated Flux deployments
+    default: false
+  dry-run:
+    description: Print out yaml files to be created in GitHub - Do NOT commit
+    default: false
+  built:
+    description: Run Kustomize build during dry-run
+    default: false
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
