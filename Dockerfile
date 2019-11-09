@@ -2,7 +2,7 @@ FROM ruby:2-slim
 
 LABEL "name"="Kustomized Namespace - Create Overlay"
 LABEL "maintainer"="Brett Dudo <brett@dudo.io>"
-LABEL "version"="0.9.0"
+LABEL "version"="1.0.0"
 
 LABEL "com.github.actions.icon"="git-commit"
 LABEL "com.github.actions.color"="green"
@@ -12,7 +12,7 @@ COPY LICENSE README.md /
 
 RUN apt-get update -qq && apt-get install -y curl
 
-ENV KUSTOMIZE=2.1.0
+ENV KUSTOMIZE=3.3.1
 RUN curl -so /bin/kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/v${KUSTOMIZE}/kustomize_${KUSTOMIZE}_linux_amd64
 RUN chmod u+x /bin/kustomize
 
