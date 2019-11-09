@@ -2,12 +2,7 @@ FROM ruby:2-slim
 
 LABEL "name"="Kustomized Namespace - Create Overlay"
 LABEL "maintainer"="Brett Dudo <brett@dudo.io>"
-LABEL "version"="1.0.0"
 
-LABEL "com.github.actions.icon"="git-commit"
-LABEL "com.github.actions.color"="green"
-LABEL "com.github.actions.name"="Kustomized Namespace - Create Overlay"
-LABEL "com.github.actions.description"="This creates an overlay within a namespace for a feature and ensures your services are still connected"
 COPY LICENSE README.md /
 
 RUN apt-get update -qq && apt-get install -y curl
