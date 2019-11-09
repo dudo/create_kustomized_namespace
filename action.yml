@@ -1,5 +1,7 @@
 name: Kustomized Namespace - Create Overlay
 description: This creates an overlay within a namespace for a feature and ensures your services are still connected
+icon: git-commit
+color: green
 author: dudo
 inputs:
   service:
