@@ -31,7 +31,7 @@ module Templates
     def method_missing(method_name, *args, &block)
       super unless method_name.to_s.end_with?('?')
 
-      method_name.to_s.delete('?') == file_name
+      method_name.to_s.delete('?') == file_name.delete('.')
     end
 
     def respond_to_missing?(method_name, include_private = false)

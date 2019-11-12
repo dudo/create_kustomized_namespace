@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# https://docs.fluxcd.io/en/latest/references/fluxyaml-config-files.html
+
 require_relative 'base'
 
 module Templates
@@ -10,13 +12,17 @@ module Templates
       {
         'version' => 1,
         'commandUpdated' => {
-          'generators' => options[:generators] || []
+          'generators' => generators
         }
       }
     end
 
     def directory
       []
+    end
+
+    def generators
+      options[:generators] || []
     end
   end
 end

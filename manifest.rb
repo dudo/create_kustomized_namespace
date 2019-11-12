@@ -2,7 +2,6 @@
 
 require 'octokit'
 require 'fileutils'
-require 'byebug'
 
 require_relative 'templates/kustomization'
 require_relative 'templates/flux'
@@ -210,12 +209,14 @@ class Manifest
       File.write "/tmp/#{t.path}", t.manifest.to_yaml
     end
 
+    puts @templates.find(&:flux?)&.manifest&.to_yaml
     @templates.map(&:directory).uniq.each do |dir|
       next if dir.empty?
 
       puts '---'
       puts `kustomize build /tmp/#{dir.join('/')}`
     end
+
     puts "\n"
   end
 end

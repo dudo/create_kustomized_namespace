@@ -47,6 +47,7 @@ module Templates
       end
     end
 
+    # https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md
     def ingress_patch
       {
         'target' => {
@@ -59,6 +60,7 @@ module Templates
       }
     end
 
+    # https://github.com/kubernetes-sigs/kustomize/blob/master/examples/image.md
     def images_patch
       img_tuple = options[:image].split(':')
       {
