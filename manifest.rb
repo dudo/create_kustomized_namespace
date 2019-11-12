@@ -145,7 +145,7 @@ class Manifest
 
   def include_namespace?
     manifests = supporting_services.map { |svc| overlay_manifest_names(svc) }.flatten
-    manifests.include?(Templates::Namespace::NAME)
+    !manifests.include?(Templates::Namespace::NAME)
   end
 
   def base_manifests(svc)

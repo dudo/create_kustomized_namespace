@@ -52,7 +52,7 @@ module Templates
       {
         'target' => {
           'kind' => 'Ingress',
-          'group' => 'extensions',
+          'group' => 'networking.k8s.io',
           'version' => 'v1beta1',
           'name' => service
         },
