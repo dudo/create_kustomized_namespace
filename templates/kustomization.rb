@@ -25,13 +25,13 @@ module Templates
 
     def resources
       [].tap do |array|
-        array.push("#{Templates::Namespace::NAME}.yaml") if options[:templates].any?(&:namespace?)
+        array.push("#{Templates::Namespace::NAME}.yaml") if options[:primary] && options[:templates].any?(&:namespace?)
       end
     end
 
     def patches
       [].tap do |array|
-        array.push("#{Templates::Service::NAME}.yaml") if options[:svc]
+        array.push("#{Templates::Service::NAME}.yaml") unless options[:primary]
       end
     end
 

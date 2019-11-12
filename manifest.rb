@@ -87,7 +87,7 @@ class Manifest
 
     @templates << Templates::Ingress.new(service: svc, namespace: namespace, hosts: base_ingress_hosts(svc)) if include_ingress?(svc)
     @templates << Templates::Service.new(service: svc, namespace: namespace) if include_service?(svc)
-    @templates << Templates::Kustomization.new(service: svc, namespace: namespace, templates: @templates, svc: true)
+    @templates << Templates::Kustomization.new(service: svc, namespace: namespace, templates: @templates, primary: false)
   end
 
   def commit_overlay_to_github # rubocop:disable Metrics/AbcSize
