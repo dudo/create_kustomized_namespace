@@ -5,7 +5,7 @@ require 'yaml'
 module Templates
   class Base
     attr_reader :service, :namespace, :options
-    
+
     def initialize(service:, namespace:, **options)
       @service = service
       @namespace = namespace
@@ -28,10 +28,14 @@ module Templates
       "#{directory.push(file_name).join('/')}.yaml"
     end
 
-    def method_missing(m, *args, &block)
-      super unless m.to_s.end_with?('?')
+    def method_missing(method_name, *args, &block)
+      super unless method_name.to_s.end_with?('?')
 
-      m.to_s.delete('?') == file_name
+      method_name.to_s.delete('?') == file_name
+    end
+
+    def respond_to_missing?(method_name, include_private = false)
+      method_name.to_s.end_with?('?') || super
     end
   end
 end

@@ -2,6 +2,7 @@
 
 require 'octokit'
 require 'fileutils'
+require 'byebug'
 
 require_relative 'templates/kustomization'
 require_relative 'templates/flux'
@@ -18,39 +19,38 @@ Octokit.configure do |c|
   }
 end
 
-class String
-  def red; colorize(self, "\e[1m\e[31m"); end
-  def green; colorize(self, "\e[1m\e[32m"); end
-  def colorize(text, color_code)  "#{color_code}#{text}\e[0m" end
-end
-
 class Manifest
-  attr_reader :client, :repo, :service, :namespace, :services
+  attr_reader :client, :repo, :service, :namespace, :image, :services
 
-  def initialize
+  BASE_DIR = 'base'
+
+  def initialize(service:, cluster_repo:, namespace:, target_image:, tag:, token:)
     puts 'Connecting to GitHub...'
-    @client = Octokit::Client.new(access_token: $opts[:token])
-    @repo = $opts[:cluster_repo]
-    @service = $opts[:service]
-    @namespace = $opts[:namespace]
+    @client = Octokit::Client.new(access_token: token)
+    @repo = cluster_repo
+    @service = service
+    @namespace = namespace
+    @image = "#{target_image}:#{tag}"
     @services = fetch_services
-    $templates = []
+    @templates = []
   end
 
-  def self.create
-    instance = self.new
+  def self.create(options = {})
+    instance = new(**options.slice(:service, :cluster_repo, :namespace, :target_image, :tag, :token))
 
     instance.supporting_services.each do |svc|
       instance.create_supporting_manifests(svc)
     end
     instance.create_namespace_manifest
     instance.create_primary_manifests
-    instance.create_flux_manifest if $opts[:flux]
+    instance.create_flux_manifest if options[:flux]
 
-    return instance.dry_run if $opts[:dry_run]
-
-    instance.commit_overlay_to_github
-    puts 'Done!'
+    if options[:dry_run]
+      instance.dry_run(options[:built])
+    else
+      instance.commit_overlay_to_github
+      puts 'Done!'
+    end
   end
 
   def supporting_services
@@ -61,15 +61,15 @@ class Manifest
     return puts "Using existing namespace '#{namespace}'" unless include_namespace?
 
     puts "Creating namespace '#{namespace}'..."
-    $templates << Templates::Namespace.new(service: service, namespace: namespace)
+    @templates << Templates::Namespace.new(service: service, namespace: namespace)
   end
 
-  def create_primary_manifests
-    puts "Creating #{service} manifests with #{$opts[:target_image]}:#{$opts[:tag]}..."
+  def create_primary_manifests # rubocop:disable Metrics/AbcSize
+    puts "Creating #{service} manifests with #{image}..."
     # check each type of file for the service we're updating, and create an overlay
 
-    $templates << Templates::Ingress.new(service: service, namespace: namespace, hosts: base_ingress_hosts(service)) if include_ingress?(service)
-    $templates << Templates::Kustomization.new(service: service, namespace: namespace, img: true)
+    @templates << Templates::Ingress.new(service: service, namespace: namespace, hosts: base_ingress_hosts(service)) if include_ingress?(service)
+    @templates << Templates::Kustomization.new(service: service, namespace: namespace, image: image, templates: @templates)
   end
 
   def create_flux_manifest
@@ -78,37 +78,37 @@ class Manifest
       generators << { 'command' => "kustomize build ./#{svc}/overlays/#{namespace}" }
     end
 
-    $templates << Templates::Flux.new(service: service, namespace: namespace, generators: generators.uniq)
+    @templates << Templates::Flux.new(service: service, namespace: namespace, generators: generators.uniq)
   end
 
-  def create_supporting_manifests(svc)
+  def create_supporting_manifests(svc) # rubocop:disable Metrics/AbcSize
     return puts "Using existing manifests for #{svc}" unless create_overlay?(svc)
 
     puts "Creating #{svc} manifests pointing to #{svc}.default.svc.cluster.local..."
 
-    $templates << Templates::Ingress.new(service: svc, namespace: namespace, hosts: base_ingress_hosts(svc)) if include_ingress?(svc)
-    $templates << Templates::Service.new(service: svc, namespace: namespace) if include_service?(svc)
-    $templates << Templates::Kustomization.new(service: svc, namespace: namespace, svc: true)
+    @templates << Templates::Ingress.new(service: svc, namespace: namespace, hosts: base_ingress_hosts(svc)) if include_ingress?(svc)
+    @templates << Templates::Service.new(service: svc, namespace: namespace) if include_service?(svc)
+    @templates << Templates::Kustomization.new(service: svc, namespace: namespace, templates: @templates, svc: true)
   end
 
-  def commit_overlay_to_github
+  def commit_overlay_to_github # rubocop:disable Metrics/AbcSize
     puts "Creating overlays for '#{namespace}' in GitHub repository #{repo}..."
     ref = 'heads/master'
     sha_latest_commit = client.ref(repo, ref).object.sha
 
     sha_base_tree = client.commit(repo, sha_latest_commit).commit.tree.sha
 
-    sha_new_tree = client.create_tree(repo, new_blobs, { base_tree: sha_base_tree }).sha
+    sha_new_tree = client.create_tree(repo, new_blobs, base_tree: sha_base_tree).sha
 
-    commit_message = "Create #{service} in namespace '#{namespace}' with image #{$opts[:target_image]}:#{$opts[:tag]}"
+    commit_message = "Create #{service} in namespace '#{namespace}' with image #{image}"
     sha_new_commit = client.create_commit(repo, commit_message, sha_new_tree, sha_latest_commit).sha
-    updated_ref = client.update_ref(repo, ref, sha_new_commit)
+    client.update_ref(repo, ref, sha_new_commit)
   end
 
-  def dry_run
-    puts $templates.any? ? 'Printing yaml files...' : 'No yaml files to print!'
+  def dry_run(built = false)
+    puts @templates.any? ? 'Printing yaml files...' : 'No yaml files to print!'
     puts
-    $opts[:built] ? print_manifests : print_templates
+    built ? print_manifests : print_templates
   end
 
   private
@@ -126,9 +126,9 @@ class Manifest
 
   def flux_generators
     flux = client.contents(repo, path: "#{Templates::Flux::NAME}.yaml")
-    hash = YAML.load Base64.decode64(flux.content)
+    hash = YAML.safe_load Base64.decode64(flux.content)
     hash['commandUpdated']['generators']
-  rescue
+  rescue StandardError
     []
   end
 
@@ -151,12 +151,12 @@ class Manifest
 
   def base_manifests(svc)
     @base_manifests ||= {}
-    @base_manifests[svc] ||= client.contents(repo, path: [svc, 'base'].join('/')).select { |c| c[:type] == 'file' }
+    @base_manifests[svc] ||= client.contents(repo, path: [svc, BASE_DIR].join('/')).select { |c| c[:type] == 'file' }
   end
 
   def base_manifest_names(svc)
-    base_manifests(svc).map { |m| m.name.gsub /.ya*ml/, '' }
-  rescue
+    base_manifests(svc).map { |m| m.name.gsub(/.ya*ml/, '') }
+  rescue StandardError
     []
   end
 
@@ -166,21 +166,21 @@ class Manifest
   end
 
   def overlay_manifest_names(svc)
-    overlay_manifests(svc).map { |m| m.name.gsub /.ya*ml/, '' }
-  rescue
+    overlay_manifests(svc).map { |m| m.name.gsub(/.ya*ml/, '') }
+  rescue StandardError
     []
   end
 
   def base_ingress_hosts(svc)
-    ingress = client.contents(repo, path: [svc, 'base', "#{Templates::Ingress::NAME}.yaml"].join('/'))
-    hash = YAML.load Base64.decode64(ingress.content)
+    ingress = client.contents(repo, path: [svc, BASE_DIR, "#{Templates::Ingress::NAME}.yaml"].join('/'))
+    hash = YAML.safe_load Base64.decode64(ingress.content)
     hash['spec']['rules'].map { |r| r['host'] }
-  rescue
+  rescue StandardError
     []
   end
 
   def new_blobs
-    $templates.map do |t|
+    @templates.map do |t|
       {
         path: t.path,
         mode: '100644',
@@ -191,13 +191,13 @@ class Manifest
   end
 
   def print_templates
-    $templates.each do |t|
+    @templates.each do |t|
       puts t.manifest.to_yaml
     end
     puts "\n"
   end
 
-  def print_manifests
+  def print_manifests # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     services.each do |svc|
       base_manifests(svc).each do |m|
         FileUtils.mkdir_p "/tmp/#{svc}/base"
@@ -205,12 +205,14 @@ class Manifest
       end
     end
 
-    $templates.each do |t|
+    @templates.each do |t|
       FileUtils.mkdir_p "/tmp/#{t.directory.join('/')}"
       File.write "/tmp/#{t.path}", t.manifest.to_yaml
     end
 
-    $templates.map(&:directory).uniq.each do |dir|
+    @templates.map(&:directory).uniq.each do |dir|
+      next if dir.empty?
+
       puts '---'
       puts `kustomize build /tmp/#{dir.join('/')}`
     end

@@ -15,13 +15,13 @@ inputs:
     description: Remotely hosted target image
     default: ENV['TARGET_IMAGE']
   namespace:
-    description: Desired namespace, or inferred from GITHUB_HEAD_REF
+    description: Desired namespace, or inferred from $GITHUB_HEAD_REF
     default: ENV['GITHUB_HEAD_REF']
   tag:
-    description: Image tag, or inferred from GITHUB_SHA
+    description: Image tag, or inferred from $GITHUB_SHA
     default: ENV['GITHUB_SHA']
   token:
-    description: GitHub access token with cluster-repo's access, _NOT_ GITHUB_TOKEN
+    description: GitHub access token with cluster-repo's access, _NOT_ $GITHUB_TOKEN
     default: ENV['TOKEN']
   flux:
     description: Modifies manifests for automated Flux deployments

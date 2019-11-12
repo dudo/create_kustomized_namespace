@@ -12,7 +12,7 @@ module Templates
         'apiVersion' => 'v1',
         'metadata' => {
           'name' => namespace
-        } 
+        }
       }
     end
   end

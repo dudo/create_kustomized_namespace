@@ -11,7 +11,7 @@ module Templates
         'version' => 1,
         'commandUpdated' => {
           'generators' => options[:generators] || []
-        } 
+        }
       }
     end
 

@@ -3,7 +3,7 @@
 require_relative 'base'
 
 module Templates
-  class Service < Base 
+  class Service < Base
     NAME = 'service'
 
     def manifest
