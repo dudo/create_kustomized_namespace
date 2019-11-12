@@ -67,12 +67,51 @@ Ingress are created, to allow any visual testing, as a subdomain matching your f
 Check out the overlays to be created:
 
     docker build -t kustomized_namespaces/create:latest .
-    docker run kustomized_namespaces/create:latest -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest --dry-run
+    docker run -rm kustomized_namespaces/create:latest -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest --dry-run
 
 And to see Kustomize do its thing:
 
-    ruby create_overlay.rb -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest --dry-run --built
+    docker run -rm kustomized_namespaces/create:latest -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest --dry-run --built
 
 Actually commit to your repo!
 
-    docker run kustomized_namespaces/create:latest -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest -T YourReposDeployKeyToken
+    docker run -rm kustomized_namespaces/create:latest -r dudo/k8s_colors -n feature_branch_1 -s blue -i dudo/blue -t latest -T YourReposDeployKeyToken
+
+### Example GitHub Actions Workflow
+
+    on:
+      pull_request:
+        types: [labeled]
+    name: Build, push, and deploy
+    env:
+      TARGET_IMAGE: dudo/blue
+    jobs:
+      docker:
+        if: github.event.label.name == 'deploy'
+        name: Build and push Docker Image
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v1
+        - name: Registry
+          env:
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+        - name: Build
+          run: docker build -t $TARGET_IMAGE:${GITHUB_SHA::7} .
+        - name: Push
+          run: docker push $TARGET_IMAGE:${GITHUB_SHA::7}
+      deploy:
+        name: Deploy to Cluster
+        runs-on: ubuntu-latest
+        needs: docker
+        env:
+          SERVICE: blue
+          CLUSTER_REPO: dudo/k8s_colors
+        steps:
+        - name: Kustomized Namespace - Create Overlay
+          env:
+            TOKEN: ${{ secrets.TOKEN }}
+          uses: zyngl/create_kustomized_namespace@v1.3.0
+          with:
+            args: --flux
