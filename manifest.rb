@@ -68,7 +68,7 @@ class Manifest
     # check each type of file for the service we're updating, and create an overlay
 
     @templates << Templates::Ingress.new(service: service, namespace: namespace, hosts: base_ingress_hosts(service)) if include_ingress?(service)
-    @templates << Templates::Kustomization.new(service: service, namespace: namespace, image: image, templates: @templates)
+    @templates << Templates::Kustomization.new(service: service, namespace: namespace, image: image, templates: @templates, primary: true)
   end
 
   def create_flux_manifest
